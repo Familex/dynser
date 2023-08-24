@@ -9,7 +9,7 @@ TEST_CASE("Throw errors from lua scripts")
     auto ser = get_dynser_instance();
 
     const auto config =
-#include "configs/throw_lua_errors.yaml.raw"
+#include "../configs/throw_lua_errors.yaml.raw"
         ;
 
     DYNSER_LOAD_CONFIG(ser, dynser::config::RawContents{ config });

@@ -5,7 +5,7 @@ TEST_CASE("Branched rule")
     using namespace dynser_test;
 
     const auto config =
-#include "configs/branched.yaml.raw"
+#include "../configs/branched.yaml.raw"
         ;
 
     auto ser = get_dynser_instance();
