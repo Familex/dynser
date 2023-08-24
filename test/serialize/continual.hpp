@@ -5,7 +5,7 @@ TEST_CASE("Continual rule #0")
     using namespace dynser_test;
 
     const auto config =
-#include "configs/continual.yaml.raw"
+#include "../configs/continual.yaml.raw"
         ;
 
     auto ser = get_dynser_instance();

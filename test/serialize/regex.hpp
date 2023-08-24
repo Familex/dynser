@@ -24,7 +24,7 @@ TEST_CASE("Regex")
     };
 
     const auto config =
-#include "configs/regex.yaml.raw"
+#include "../configs/regex.yaml.raw"
         ;
 
     DYNSER_LOAD_CONFIG(ser, dynser::config::RawContents{ config });

@@ -5,7 +5,7 @@ TEST_CASE("Recurrent rule")
     using namespace dynser_test;
 
     const auto config =
-#include "configs/recurrent.yaml.raw"
+#include "../configs/recurrent.yaml.raw"
         ;
 
     auto ser = get_dynser_instance();

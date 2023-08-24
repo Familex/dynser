@@ -137,6 +137,21 @@ using Error = std::variant<
 
 }    // namespace serialize_err
 
+namespace deserialize_err
+{
+struct Unknown
+{ };
+struct ConfigNotLoaded
+{ };
+struct ConfigTagNotFound
+{
+    std::string tag;
+};
+
+using Error = std::variant<Unknown, ConfigNotLoaded, ConfigTagNotFound>;
+
+}    // namespace deserialize_err
+
 // FIXME rename
 /**
  * \brief Error place context on serialize error to handle nested rules.
@@ -154,7 +169,17 @@ struct SerializeError
     std::vector<ErrorRef> ref_seq{};
 };
 
+struct DeserializeError
+{
+    deserialize_err::Error error;
+    std::string scope_string;
+    std::vector<ErrorRef> ref_seq{};
+};
+
 using SerializeResult = std::expected<std::string, SerializeError>;
+
+template <typename Result>
+using DeserializeResult = std::expected<Result, DeserializeError>;
 
 /**
  * \brief helper.
@@ -162,6 +187,16 @@ using SerializeResult = std::expected<std::string, SerializeError>;
 inline SerializeResult make_serialize_err(serialize_err::Error&& err, Properties scope_props) noexcept
 {
     return std::unexpected{ SerializeError{ std::move(err), std::move(scope_props), {} } };
+}
+
+/**
+ * \brief helper.
+ */
+template <typename Result>
+inline DeserializeResult<Result>
+make_deserialize_err(deserialize_err::Error&& err, std::string_view scope_string) noexcept
+{
+    return std::unexpected{ DeserializeError{ std::move(err), std::string{ scope_string }, {} } };
 }
 
 /**
@@ -674,6 +709,11 @@ public:
     }
 
     template <typename Target>
+        requires requires(Target target) {
+            {
+                ttpm(context, target)
+            } -> std::same_as<dynser::Properties>;
+        }
     SerializeResult serialize(const Target& target, const std::string_view tag) noexcept
     {
         if (!config_) {
@@ -683,16 +723,42 @@ public:
         return serialize_props(ttpm(context, target), tag);
     }
 
-    template <typename Target>
-    std::optional<Target> deserialize(const std::string_view sv, const std::string_view tag) noexcept
+    DeserializeResult<Properties> deserialize_to_props(const std::string_view sv, const std::string_view tag) noexcept
     {
-        // string to fields
+        using Target = Properties;
 
-        // fields to properites
+        if (!config_) {
+            return make_deserialize_err<Target>(deserialize_err::ConfigNotLoaded{}, sv);
+        }
+        if (!config_->tags.contains(std::string{ tag })) {
+            return make_deserialize_err<Target>(deserialize_err::ConfigTagNotFound{ std::string{ tag } }, sv);
+        }
 
-        // properties to target
+        dynser::Properties result;
 
-        return {};
+        // process rules to match fields in sv
+        // process scripts to convert fields to props
+
+        return result;
+    }
+
+    template <typename Target>
+        requires requires(dynser::Properties props, Target target) {
+            {
+                pttm(context, props, target)
+            } -> std::same_as<void>;
+        }
+    DeserializeResult<Target> deserialize(const std::string_view sv, const std::string_view tag) noexcept
+    {
+        auto props_sus = deserialize_to_props(sv, tag);
+
+        if (!props_sus) {
+            return std::unexpected{ props_sus.error() };
+        }
+
+        Target result;
+        pttm(context, *props_sus, result);
+        return result;
     }
 };
 

@@ -50,22 +50,14 @@ add_executable (
     serialize/tests.cpp
 )
 
-# FIXME add_dependencies doesn't work
-include ("${CMAKE_CURRENT_SOURCE_DIR}/cmake/process_configs.cmake")
+add_executable (
+    deserialize-tests
 
-add_custom_target (
-    process-configs
-    COMMAND ${CMAKE_COMMAND} -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/process_configs.cmake"
-)
+    deserialize/common.hpp
 
-add_dependencies (
-    serialize-tests
-    process-configs
-)
+    deserialize/regex.hpp
 
-add_dependencies (
-    benchmark-tests
-    process-configs
+    deserialize/tests.cpp
 )
 
 add_executable (
@@ -75,14 +67,30 @@ add_executable (
 )
 
 set ("include-util-dir" "serialize-tests" "benchmark-tests")
-set ("tests" "internal-tests" "benchmark-tests" "serialize-tests" "catch-test")
-set ("dynser-tests" "internal-tests" "benchmark-tests" "serialize-tests")
+set ("need-configs" "serialize-tests" "benchmark-tests" "deserialize-tests")
+set ("tests" "internal-tests" "benchmark-tests" "serialize-tests" "catch-test" "deserialize-tests")
+set ("dynser-tests" "internal-tests" "benchmark-tests" "serialize-tests" "deserialize-tests")
 
 foreach (targ ${include-util-dir})
     target_include_directories (
         ${targ}
         PRIVATE
         "util/"
+    )
+endforeach ()
+
+# FIXME add_dependencies doesn't work
+include ("${CMAKE_CURRENT_SOURCE_DIR}/cmake/process_configs.cmake")
+
+add_custom_target (
+    process-configs
+    COMMAND ${CMAKE_COMMAND} -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/process_configs.cmake"
+)
+
+foreach (targ ${need-configs})
+    add_dependencies (
+        ${targ}
+        process-configs
     )
 endforeach ()
 

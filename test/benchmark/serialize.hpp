@@ -16,7 +16,7 @@ TEST_CASE("Serialize")
         config::ParseResult config_load_result;
 
         const auto config =
-#include "configs/serialize.yaml.raw"
+#include "../configs/benchmark_serialize.yaml.raw"
             ;
 
         BENCHMARK("load config")
