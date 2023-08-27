@@ -68,6 +68,26 @@ public:
 #undef DYNSER_POPULATE_PROPERTY_VALUE
 
     // ========================================================================
+    // ===                     STATIC METHOD CONSTRUCTORS                   ===
+    // ========================================================================
+
+#define DYNSER_POPULATE_STATIC_METHOD_CTOR(name, type)                                                                 \
+    inline static PropertyValue name(type value) /*noexcept*/ { return PropertyValue(std::move(value)); }
+
+    DYNSER_POPULATE_STATIC_METHOD_CTOR(from_i32, std::int32_t)
+    DYNSER_POPULATE_STATIC_METHOD_CTOR(from_i64, std::int64_t)
+    DYNSER_POPULATE_STATIC_METHOD_CTOR(from_u32, std::uint32_t)
+    DYNSER_POPULATE_STATIC_METHOD_CTOR(from_u64, std::uint64_t)
+    DYNSER_POPULATE_STATIC_METHOD_CTOR(from_float, FloatType)
+    DYNSER_POPULATE_STATIC_METHOD_CTOR(from_string, StringType)
+    DYNSER_POPULATE_STATIC_METHOD_CTOR(from_bool, bool)
+    DYNSER_POPULATE_STATIC_METHOD_CTOR(from_char, CharType)
+    DYNSER_POPULATE_STATIC_METHOD_CTOR(from_list, ListType<PropertyValue>)
+    DYNSER_POPULATE_STATIC_METHOD_CTOR(from_properties, Properties)
+
+#undef DYNSER_POPULATE_STATIC_METHOD_CTOR
+
+    // ========================================================================
     // ===                           'IS' method                            ===
     // ========================================================================
 

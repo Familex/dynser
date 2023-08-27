@@ -147,8 +147,20 @@ struct ConfigTagNotFound
 {
     std::string tag;
 };
+struct ScriptError
+{
+    std::string message;
+};
+struct PatternNotFound
+{
+    std::string pattern;
+};
+struct FieldNotFound
+{
+    std::string field_name;
+};
 
-using Error = std::variant<Unknown, ConfigNotLoaded, ConfigTagNotFound>;
+using Error = std::variant<Unknown, ConfigNotLoaded, ConfigTagNotFound, ScriptError, PatternNotFound, FieldNotFound>;
 
 }    // namespace deserialize_err
 
@@ -374,6 +386,120 @@ std::optional<PrioritizedListLen> calc_max_property_lists_len(
     return result;
 }
 
+DeserializeResult<std::pair<Properties, std::string_view>> deserialize_to_props(
+    Context& context,
+    config::Config const& config,
+    std::string_view const sv,
+    std::string_view const tag
+) noexcept
+{
+    using ResultSuccess = std::pair<Properties, std::string_view>;
+    using Result = DeserializeResult<ResultSuccess>;
+    // process rules to match fields in sv
+    // process scripts to convert fields to props
+    const auto& curr_tag = config.tags.at(std::string{ tag });
+
+    return util::visit_one_terminated(
+        curr_tag.nested,
+        [&](config::yaml::Continual const& nested) -> Result {
+            auto curr_sv{ sv };
+            Properties result{};
+            Fields fields{};
+            for (std::size_t rule_ind{}; auto const& rule : nested) {
+                auto const deserialize_rule_error = util::visit_one_terminated(
+                    rule,
+                    [&](config::yaml::LikeExisting auto const& rule) -> std::optional<DeserializeError> {
+                        auto const deserialize_to_props_result =
+                            deserialize_to_props(context, config, curr_sv, rule.tag);
+                        if (!deserialize_to_props_result) {
+                            return deserialize_to_props_result.error();
+                        }
+                        auto const& [props, sv_rem] = *deserialize_to_props_result;
+                        result = std::move(result) << props;
+                        curr_sv = sv_rem;
+                        return std::nullopt;
+                    },
+                    [&](config::yaml::LikeLinear auto const& rule) -> std::optional<DeserializeError> {
+                        auto const pattern_str{ rule.dyn_groups ? config::details::resolve_dyn_regex(
+                                                                      rule.pattern,
+                                                                      *dynser::details::merge_maps(
+                                                                          *rule.dyn_groups,
+                                                                          dynser::details::props_to_fields(context)
+                                                                      )
+                                                                  )
+                                                                : rule.pattern };
+                        // FIXME use another regex engine
+                        std::regex pattern{ pattern_str };
+                        // check sv slices for pattern match
+                        for (int len{ static_cast<int>(curr_sv.size()) }; len >= 0; --len) {
+                            std::smatch match;
+                            auto const sub_sv{ curr_sv.substr(0, len) };
+                            std::string const sub_str{ sub_sv };
+                            if (std::regex_match(sub_str, match, pattern)) {
+                                curr_sv = curr_sv.substr(len);
+                                if (rule.fields) {
+                                    if (rule.fields->size() > match.size()) {
+                                        return DeserializeError{ { deserialize_err::FieldNotFound{
+                                                                     rule.fields->at(match.size()) } },
+                                                                 std::string{ curr_sv },
+                                                                 {} };
+                                    }
+                                    for (auto const& [group_ind, group_name] : *rule.fields) {
+                                        fields[group_name] = match[group_ind].str();
+                                    }
+                                }
+                                return std::nullopt;
+                            }
+                        }
+                        return DeserializeError{ { deserialize_err::PatternNotFound{ pattern_str } },
+                                                 std::string{ curr_sv },
+                                                 {} };
+                    }
+                );
+                if (deserialize_rule_error) {
+                    // FIXME add err_ref?
+                    return std::unexpected{ *deserialize_rule_error };
+                }
+                ++rule_ind;
+            }
+
+            if (auto const& script = curr_tag.deserialization_script) {
+                luwra::StateWrapper state;
+                state.loadStandardLibrary();
+                register_userdata_property_value(state);
+                state[config::keywords::CONTEXT] = context;
+                state[config::keywords::INPUT_TABLE] = fields;
+                state[config::keywords::OUTPUT_TABLE] = dynser::Properties{};
+                auto const script_run_result = state.runString(script->c_str());
+                if (script_run_result != LUA_OK) {
+                    auto const error = state.read<std::string>(-1);
+                    return make_deserialize_err<ResultSuccess>(deserialize_err::ScriptError{ error }, sv);
+                }
+                auto const table =
+                    state[config::keywords::OUTPUT_TABLE].read<std::map<std::string, luwra::Reference>>();
+                for (auto const& [key, val] : table) {
+                    // FIXME check if type is correct (calls abort() if not)
+                    result[key] = val;
+                }
+            }
+
+            return std::make_pair(result, curr_sv);
+        },
+        [&](config::yaml::Recurrent const& nested) -> Result {
+            // FIXME
+            return {};
+        },
+        [&](config::yaml::Branched const& nested) -> Result {
+            // FIXME
+            return {};
+        },
+        [&](config::yaml::RecurrentDict const& nested) -> Result {
+            // FIXME
+            return {};
+        }
+    );
+}
+
 }    // namespace details
 
 /**
@@ -486,7 +612,7 @@ public:
         return config;
     }
 
-    SerializeResult serialize_props(const Properties& props, const std::string_view tag) noexcept;
+    SerializeResult serialize_props(Properties const& props, std::string_view const tag) noexcept;
 
     template <typename Target>
         requires requires(Target target) {
@@ -494,7 +620,7 @@ public:
                 ttpm(context, target)
             } -> std::same_as<dynser::Properties>;
         }
-    SerializeResult serialize(const Target& target, const std::string_view tag) noexcept
+    SerializeResult serialize(Target const& target, std::string_view const tag) noexcept
     {
         if (!config_) {
             return make_serialize_err(serialize_err::ConfigNotLoaded{}, {});
@@ -503,7 +629,7 @@ public:
         return serialize_props(ttpm(context, target), tag);
     }
 
-    DeserializeResult<Properties> deserialize_to_props(const std::string_view sv, const std::string_view tag) noexcept;
+    DeserializeResult<Properties> deserialize_to_props(std::string_view const sv, std::string_view const tag) noexcept;
 
     template <typename Target>
         requires requires(dynser::Properties props, Target target) {
@@ -511,7 +637,7 @@ public:
                 pttm(context, props, target)
             } -> std::same_as<void>;
         }
-    DeserializeResult<Target> deserialize(const std::string_view sv, const std::string_view tag) noexcept
+    DeserializeResult<Target> deserialize(std::string_view const sv, std::string_view const tag) noexcept
     {
         auto props_sus = deserialize_to_props(sv, tag);
 
@@ -529,7 +655,7 @@ public:
 DynSer() -> DynSer<TargetToPropertyMapper<>, PropertyToTargetMapper<>>;
 
 template <typename PTTM, typename TTPM>
-SerializeResult DynSer<PTTM, TTPM>::serialize_props(const Properties& props, const std::string_view tag) noexcept
+SerializeResult DynSer<PTTM, TTPM>::serialize_props(Properties const& props, std::string_view const tag) noexcept
 {
     if (!config_) {
         return make_serialize_err(serialize_err::ConfigNotLoaded{}, props);
@@ -750,7 +876,7 @@ SerializeResult DynSer<PTTM, TTPM>::serialize_props(const Properties& props, con
 
 template <typename PTTM, typename TTPM>
 DeserializeResult<Properties>
-DynSer<PTTM, TTPM>::deserialize_to_props(const std::string_view sv, const std::string_view tag) noexcept
+DynSer<PTTM, TTPM>::deserialize_to_props(std::string_view const sv, std::string_view const tag) noexcept
 {
     using Target = Properties;
 
@@ -761,12 +887,14 @@ DynSer<PTTM, TTPM>::deserialize_to_props(const std::string_view sv, const std::s
         return make_deserialize_err<Target>(deserialize_err::ConfigTagNotFound{ std::string{ tag } }, sv);
     }
 
-    dynser::Properties result;
+    auto const deserialize_to_props_result = details::deserialize_to_props(context, *config_, sv, tag);
+    if (!deserialize_to_props_result) {
+        return std::unexpected{ deserialize_to_props_result.error() };
+    }
+    // FIMXE sv_rem unused
+    auto const& [props, sv_rem] = *deserialize_to_props_result;
 
-    // process rules to match fields in sv
-    // process scripts to convert fields to props
-
-    return result;
+    return props;
 }
 
 }    // namespace dynser

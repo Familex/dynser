@@ -55,6 +55,7 @@ add_executable (
 
     deserialize/common.hpp
 
+    deserialize/continual.hpp
     deserialize/regex.hpp
 
     deserialize/tests.cpp
@@ -66,7 +67,7 @@ add_executable (
     catch/catch_test.cpp
 )
 
-set ("include-util-dir" "serialize-tests" "benchmark-tests")
+set ("include-util-dir" "serialize-tests" "benchmark-tests" "deserialize-tests")
 set ("need-configs" "serialize-tests" "benchmark-tests" "deserialize-tests")
 set ("tests" "internal-tests" "benchmark-tests" "serialize-tests" "catch-test" "deserialize-tests")
 set ("dynser-tests" "internal-tests" "benchmark-tests" "serialize-tests" "deserialize-tests")

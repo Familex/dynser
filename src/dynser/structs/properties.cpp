@@ -43,4 +43,17 @@ void dynser::register_userdata_property_value(luwra::StateWrapper& state) noexce
         // meta-members
         {}
     );
+
+    state["dynser"] = std::map<std::string, luwra::CFunction>{
+        { "from_i32", LUWRA_WRAP(dynser::PropertyValue::from_i32) },
+        { "from_i64", LUWRA_WRAP(dynser::PropertyValue::from_i64) },
+        { "from_u32", LUWRA_WRAP(dynser::PropertyValue::from_u32) },
+        { "from_float", LUWRA_WRAP(dynser::PropertyValue::from_float) },
+        { "from_string", LUWRA_WRAP(dynser::PropertyValue::from_string) },
+        { "from_bool", LUWRA_WRAP(dynser::PropertyValue::from_bool) },
+        { "from_char", LUWRA_WRAP(dynser::PropertyValue::from_char) },
+        // FIXME 'read': no matching overloaded function found error
+        // { "from_list", LUWRA_WRAP(dynser::PropertyValue::from_list) },
+        { "from_properties", LUWRA_WRAP(dynser::PropertyValue::from_properties) },
+    };
 }

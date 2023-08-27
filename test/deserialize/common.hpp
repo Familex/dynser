@@ -3,6 +3,8 @@
 #include "dynser.h"
 #include <catch2/catch_test_macros.hpp>
 
+#include "printer.hpp"
+
 namespace dynser_test
 {
 #define DYNSER_LOAD_CONFIG(ser, config)                                                                                \

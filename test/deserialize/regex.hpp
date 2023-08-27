@@ -69,9 +69,12 @@ TEST_CASE("Regex")
         for (std::size_t ind{}; auto const& regex : regexes) {
             DYNAMIC_SECTION("regex #" << ind)
             {
-                const auto parsed = ser.deserialize<dynser::regex::Regex>(regex, "regex");
+                auto const props_sus = ser.deserialize_to_props(regex, "regex");
+                REQUIRE(props_sus);
+                INFO("raw props: " << Printer::properties_to_string(*props_sus));
+                auto const parsed = ser.deserialize<dynser::regex::Regex>(regex, "regex");
                 REQUIRE(parsed);
-                const auto string = regex_to_string(*parsed);
+                auto const string = regex_to_string(*parsed);
                 CHECK(string == regex);
             }
             ++ind;

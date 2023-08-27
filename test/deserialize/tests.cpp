@@ -1,6 +1,7 @@
 // make one target with all tests
 
 // clang-format off
+#include "continual.hpp"
 #include "regex.hpp"
 // clang-format on
 

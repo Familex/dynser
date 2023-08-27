@@ -164,6 +164,35 @@ struct Printer
 
 #undef DYNSER_USE_STD_TO_STRING
     }
+
+    [[nodiscard]] static std::string deserialize_err_to_string(dynser::DeserializeError const& wrapper) noexcept
+    {
+        using namespace dynser::deserialize_err;
+
+        std::string ref_str;
+
+        for (const auto& el : wrapper.ref_seq) {
+            ref_str += std::format(" from '{}' tag at '{}' rule", el.tag, el.rule_ind);
+        }
+
+        auto error_str = dynser::util::visit_one_terminated(
+            wrapper.error,
+            [](const Unknown&) -> std::string { return "unknown error"; },
+            [](const ConfigNotLoaded&) -> std::string { return "config not loaded"; },
+            [](const ConfigTagNotFound& error) -> std::string {
+                return std::format("config tag '{}' not found", error.tag);
+            },
+            [](const ScriptError& error) -> std::string { return std::format("script error: '{}'", error.message); },
+            [](const PatternNotFound& error) -> std::string {
+                return std::format("pattern '{}' not found", error.pattern);
+            },
+            [](const FieldNotFound& error) -> std::string {
+                return std::format("field '{}' not found", error.field_name);
+            }
+        );
+
+        return error_str + ref_str + " in substr: '" + wrapper.scope_string + "'";
+    }
 };
 
 }    // namespace dynser_test
@@ -180,6 +209,25 @@ struct StringMaker<dynser::SerializeResult>
         }
         else {
             return dynser_test::Printer::serialize_err_to_string(value.error());
+        }
+    }
+};
+
+template <typename T>
+struct StringMaker<dynser::DeserializeResult<T>>
+{
+    static std::string convert(dynser::DeserializeResult<T> const& value)
+    {
+        if (value) {
+            if constexpr (std::is_same_v<T, dynser::Properties>) {
+                return dynser_test::Printer::properties_to_string(*value);
+            }
+            else {
+                return std::format("<{}>", typeid(T).name());
+            }
+        }
+        else {
+            return dynser_test::Printer::deserialize_err_to_string(value.error());
         }
     }
 };
