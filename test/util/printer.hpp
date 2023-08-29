@@ -188,6 +188,10 @@ struct Printer
             },
             [](const FieldNotFound& error) -> std::string {
                 return std::format("field '{}' not found", error.field_name);
+            },
+            [](const NoBranchMatched&) -> std::string { return "no branch matched"; },
+            [](const DynGroupValueNotFound& error) -> std::string {
+                return std::format("value for dyn group '{}' not found", error.key);
             }
         );
 

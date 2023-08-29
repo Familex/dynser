@@ -137,6 +137,12 @@ concept LikeExisting = requires(Rule const rule) {
     {
         rule.tag
     } -> std::same_as<std::string const&>;
+    {
+        rule.prefix
+    } -> std::same_as<std::optional<std::string> const&>;
+    {
+        rule.required
+    } -> std::same_as<bool const&>;
 };
 
 template <typename Rule>
@@ -147,6 +153,9 @@ concept LikeLinear = requires(Rule const rule) {
     {
         rule.fields
     } -> std::same_as<std::optional<GroupValues> const&>;
+    {
+        rule.dyn_groups
+    } -> std::same_as<std::optional<DynGroupValues> const&>;
 };
 
 }    // namespace yaml

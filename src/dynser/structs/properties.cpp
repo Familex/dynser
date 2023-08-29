@@ -1,12 +1,17 @@
 #include "properties.h"
 
-dynser::Properties dynser::operator<<(dynser::Properties&& lhs, dynser::Properties&& rhs) noexcept
+dynser::Properties dynser::operator<<(dynser::Properties& lhs, dynser::Properties&& rhs) noexcept
 {
     lhs.merge(rhs);
     return lhs;
 }
 
-dynser::Properties dynser::operator<<(dynser::Properties&& lhs, dynser::Properties const& rhs) noexcept
+dynser::Properties dynser::operator<<(dynser::Properties&& lhs, dynser::Properties&& rhs) noexcept
+{
+    return lhs << rhs;
+}
+
+dynser::Properties dynser::operator<<(dynser::Properties& lhs, dynser::Properties const& rhs) noexcept
 {
     lhs.merge(dynser::Properties{ rhs });
     return lhs;

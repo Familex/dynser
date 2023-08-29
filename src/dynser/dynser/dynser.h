@@ -159,8 +159,22 @@ struct FieldNotFound
 {
     std::string field_name;
 };
+struct NoBranchMatched
+{ };
+struct DynGroupValueNotFound
+{
+    std::string key;
+};
 
-using Error = std::variant<Unknown, ConfigNotLoaded, ConfigTagNotFound, ScriptError, PatternNotFound, FieldNotFound>;
+using Error = std::variant<
+    Unknown,
+    ConfigNotLoaded,
+    ConfigTagNotFound,
+    ScriptError,
+    PatternNotFound,
+    FieldNotFound,
+    NoBranchMatched,
+    DynGroupValueNotFound>;
 
 }    // namespace deserialize_err
 
@@ -256,6 +270,21 @@ Fields props_to_fields(const Properties& props) noexcept
     for (const auto& [key, val] : props) {
         if (val.is_string()) {
             result[key] = val.as_const_string();
+        }
+        else if (val.is_i32() && val.as_const_i32() >= 0) {
+            result[key] = std::to_string(val.as_const_i32());
+        }
+        else if (val.is_i64() && val.as_const_i64() >= 0) {
+            result[key] = std::to_string(val.as_const_i64());
+        }
+        else if (val.is_u32()) {
+            result[key] = std::to_string(val.as_const_u32());
+        }
+        else if (val.is_u64()) {
+            result[key] = std::to_string(val.as_const_u64());
+        }
+        else if (val.is_char()) {
+            result[key] = std::string(1, val.as_const_char());
         }
     }
     return result;
@@ -386,6 +415,105 @@ std::optional<PrioritizedListLen> calc_max_property_lists_len(
     return result;
 }
 
+// forward declaration
+DeserializeResult<std::pair<Properties, std::string_view>> deserialize_to_props(
+    Context& context,
+    config::Config const& config,
+    std::string_view const sv,
+    std::string_view const tag
+) noexcept;
+
+struct ProcessContinualOrBranchedRuleResult
+{
+    Fields fields{};
+    Properties properties{};
+    std::string_view sv{};
+};
+
+// FIXME out-params not required
+template <typename Rule>
+DeserializeResult<ProcessContinualOrBranchedRuleResult> process_continual_or_branched_rule(
+    Context& context,
+    config::Config const& config,
+    Rule const& rule,
+    std::string_view const sv
+) noexcept
+{
+    using ResultSuccess = ProcessContinualOrBranchedRuleResult;
+    using Result = DeserializeResult<ResultSuccess>;
+
+    return util::visit_one_terminated(
+        rule,
+        [&](config::yaml::LikeExisting auto const& rule) -> Result {
+            auto const deserialize_to_props_result = deserialize_to_props(context, config, sv, rule.tag);
+            if (!deserialize_to_props_result) {
+                if (!rule.required &&
+                    std::holds_alternative<deserialize_err::PatternNotFound>(deserialize_to_props_result.error().error))
+                {
+                    // skip rule
+                    return ResultSuccess{ .fields = {}, .properties = {}, .sv = sv };
+                }
+                return std::unexpected{ deserialize_to_props_result.error() };
+            }
+            auto const& [props, sv_rem] = *deserialize_to_props_result;
+            if (rule.prefix) {
+                return ResultSuccess{
+                    .fields = {},
+                    .properties = util::add_prefix(props, *rule.prefix),
+                    .sv = sv_rem,
+                };
+            }
+            else {
+                return ResultSuccess{
+                    .fields = {},
+                    .properties = props,
+                    .sv = sv_rem,
+                };
+            }
+        },
+        [&](config::yaml::LikeLinear auto const& rule) -> Result {
+            Fields fields{};
+            config::yaml::Regex pattern_str{ rule.pattern };    // mutable, because conditional init below
+            if (rule.dyn_groups) {
+                auto const dyn_group_vals_sus =
+                    dynser::details::merge_maps(*rule.dyn_groups, dynser::details::props_to_fields(context));
+                if (!dyn_group_vals_sus) {
+                    return make_deserialize_err<ResultSuccess>(
+                        deserialize_err::DynGroupValueNotFound{ dyn_group_vals_sus.error() }, sv
+                    );
+                }
+                pattern_str = config::details::resolve_dyn_regex(rule.pattern, *dyn_group_vals_sus);
+            }    // default init instead of 'else'
+            // FIXME use another regex engine
+            std::regex pattern{ pattern_str };
+            // check sv slices for pattern match
+            for (int len{ static_cast<int>(sv.size()) }; len >= 0; --len) {
+                std::smatch match;
+                auto const sub_sv{ sv.substr(0, len) };
+                std::string const sub_str{ sub_sv };
+                if (std::regex_match(sub_str, match, pattern)) {
+                    if (rule.fields) {
+                        if (rule.fields->size() > match.size()) {
+                            return make_deserialize_err<ResultSuccess>(
+                                deserialize_err::FieldNotFound{ rule.fields->at(match.size()) }, sv
+                            );
+                        }
+                        for (auto const& [group_ind, group_name] : *rule.fields) {
+                            fields[group_name] = match[group_ind].str();
+                        }
+                    }
+                    return ResultSuccess{
+                        .fields = fields,
+                        .properties = {},
+                        .sv = sv.substr(len),
+                    };
+                }
+            }
+            return make_deserialize_err<ResultSuccess>(deserialize_err::PatternNotFound{ pattern_str }, sv);
+        }
+    );
+}
+
 DeserializeResult<std::pair<Properties, std::string_view>> deserialize_to_props(
     Context& context,
     config::Config const& config,
@@ -402,64 +530,18 @@ DeserializeResult<std::pair<Properties, std::string_view>> deserialize_to_props(
     return util::visit_one_terminated(
         curr_tag.nested,
         [&](config::yaml::Continual const& nested) -> Result {
-            auto curr_sv{ sv };
-            Properties result{};
+            std::string_view curr_sv{ sv };
+            Properties properties{};
             Fields fields{};
             for (std::size_t rule_ind{}; auto const& rule : nested) {
-                auto const deserialize_rule_error = util::visit_one_terminated(
-                    rule,
-                    [&](config::yaml::LikeExisting auto const& rule) -> std::optional<DeserializeError> {
-                        auto const deserialize_to_props_result =
-                            deserialize_to_props(context, config, curr_sv, rule.tag);
-                        if (!deserialize_to_props_result) {
-                            return deserialize_to_props_result.error();
-                        }
-                        auto const& [props, sv_rem] = *deserialize_to_props_result;
-                        result = std::move(result) << props;
-                        curr_sv = sv_rem;
-                        return std::nullopt;
-                    },
-                    [&](config::yaml::LikeLinear auto const& rule) -> std::optional<DeserializeError> {
-                        auto const pattern_str{ rule.dyn_groups ? config::details::resolve_dyn_regex(
-                                                                      rule.pattern,
-                                                                      *dynser::details::merge_maps(
-                                                                          *rule.dyn_groups,
-                                                                          dynser::details::props_to_fields(context)
-                                                                      )
-                                                                  )
-                                                                : rule.pattern };
-                        // FIXME use another regex engine
-                        std::regex pattern{ pattern_str };
-                        // check sv slices for pattern match
-                        for (int len{ static_cast<int>(curr_sv.size()) }; len >= 0; --len) {
-                            std::smatch match;
-                            auto const sub_sv{ curr_sv.substr(0, len) };
-                            std::string const sub_str{ sub_sv };
-                            if (std::regex_match(sub_str, match, pattern)) {
-                                curr_sv = curr_sv.substr(len);
-                                if (rule.fields) {
-                                    if (rule.fields->size() > match.size()) {
-                                        return DeserializeError{ { deserialize_err::FieldNotFound{
-                                                                     rule.fields->at(match.size()) } },
-                                                                 std::string{ curr_sv },
-                                                                 {} };
-                                    }
-                                    for (auto const& [group_ind, group_name] : *rule.fields) {
-                                        fields[group_name] = match[group_ind].str();
-                                    }
-                                }
-                                return std::nullopt;
-                            }
-                        }
-                        return DeserializeError{ { deserialize_err::PatternNotFound{ pattern_str } },
-                                                 std::string{ curr_sv },
-                                                 {} };
-                    }
-                );
-                if (deserialize_rule_error) {
+                auto process_result = process_continual_or_branched_rule(context, config, rule, curr_sv);
+                if (!process_result) {
                     // FIXME add err_ref?
-                    return std::unexpected{ *deserialize_rule_error };
+                    return std::unexpected{ process_result.error() };
                 }
+                fields.merge(process_result->fields);
+                properties.merge(process_result->properties);
+                curr_sv = process_result->sv;
                 ++rule_ind;
             }
 
@@ -479,19 +561,76 @@ DeserializeResult<std::pair<Properties, std::string_view>> deserialize_to_props(
                     state[config::keywords::OUTPUT_TABLE].read<std::map<std::string, luwra::Reference>>();
                 for (auto const& [key, val] : table) {
                     // FIXME check if type is correct (calls abort() if not)
-                    result[key] = val;
+                    properties[key] = val;
                 }
             }
 
-            return std::make_pair(result, curr_sv);
+            return std::make_pair(properties, curr_sv);
         },
         [&](config::yaml::Recurrent const& nested) -> Result {
-            // FIXME
+            // FIMXE
             return {};
         },
         [&](config::yaml::Branched const& nested) -> Result {
-            // FIXME
-            return {};
+            // find longest (not first) matching rule
+            Properties longest_result{};
+            std::optional<std::string_view> sv_rem{};
+            std::optional<std::size_t> result_rule_ind{};
+
+            {
+                std::optional<std::size_t> result_len{};
+                for (std::size_t rule_ind{}; rule_ind < nested.rules.size(); ++rule_ind) {
+                    auto process_result =
+                        process_continual_or_branched_rule(context, config, nested.rules[rule_ind], sv);
+
+                    if (process_result) {
+                        auto const rule_len = sv.size() - process_result->sv.size();
+                        // result_len == rule_len could be only with overlapping rules (FIXME example)
+                        if (!result_len || result_len < rule_len) {
+                            result_len = rule_len;
+                            result_rule_ind = rule_ind;
+                            longest_result = process_result->properties;
+                            sv_rem = process_result->sv;
+                            if (!process_result->fields.empty()) {
+                                // can't be handled by design. FIXME emit warning
+                            }
+                        }
+                    }
+                    else {
+                        // ignore 'else' branch
+                    }
+                }
+            }
+
+            if (!result_rule_ind) {
+                return make_deserialize_err<ResultSuccess>(deserialize_err::NoBranchMatched{}, sv);
+            }
+
+            // process debranching script
+            {
+                luwra::StateWrapper debranching_script_state{};
+                debranching_script_state.loadStandardLibrary();
+                register_userdata_property_value(debranching_script_state);
+
+                debranching_script_state[config::keywords::CONTEXT] = context;
+                debranching_script_state[config::keywords::OUTPUT_TABLE] = Properties{};
+                debranching_script_state[config::keywords::BRANCHED_RULE_IND_VARIABLE] = *result_rule_ind;
+                auto const debranching_script_run_result =
+                    debranching_script_state.runString(nested.debranching_script.c_str());
+                if (debranching_script_run_result != LUA_OK) {
+                    auto const error = debranching_script_state.read<std::string>(-1);
+                    return make_deserialize_err<ResultSuccess>(deserialize_err::ScriptError{ error }, sv);
+                }
+                auto debranching_script_result_props =
+                    debranching_script_state[config::keywords::OUTPUT_TABLE].read<Properties>();
+
+                // merge into result
+                longest_result.merge(debranching_script_result_props);
+                // FIXME is it necessary? if so, add to other script calls
+                context = debranching_script_state[config::keywords::CONTEXT].read<Context>();
+            }
+
+            return std::make_pair(longest_result, *sv_rem);
         },
         [&](config::yaml::RecurrentDict const& nested) -> Result {
             // FIXME
@@ -645,7 +784,7 @@ public:
             return std::unexpected{ props_sus.error() };
         }
 
-        Target result;
+        Target result{};
         pttm(context, *props_sus, result);
         return result;
     }
@@ -818,11 +957,11 @@ SerializeResult DynSer<PTTM, TTPM>::serialize_props(Properties const& props, std
                 for (std::size_t ind{}; ind < max_len; ++ind) {
                     for (const auto& recurrent_rule : recurrent) {
                         // split lists in props and fields into current element
-                        auto curr_fields = fields;
+                        Fields curr_fields = fields;
                         if (unflattened_fields.size() > ind) {
                             curr_fields.merge(unflattened_fields[ind]);
                         }
-                        auto curr_props = props;
+                        Properties curr_props = props;
                         if (unflattened_props_vector.size() > ind) {
                             for (auto const& [key, val] : unflattened_props_vector[ind]) {
                                 curr_props[key] = val;

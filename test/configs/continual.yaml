@@ -30,15 +30,15 @@ tags:
       end
       out['len-stopped'] = len_stopped_str
     deserialization-script: |
-      out['dot-stopped'] = tonumber(inp['dot-stopped'])
-      out['len-stopped'] = tonumber(inp['len-stopped'])
+      out['dot-stopped'] = dynser.from_i32(tonumber(inp['dot-stopped']))
+      out['len-stopped'] = dynser.from_i32(tonumber(inp['len-stopped']))
 
   - name: "bar"
     branched:
       branching-script: |
          branch = inp['is-left']:as_bool() and 0 or 1 
       debranching-script: |
-         out['is-left'] = branch == 1
+         out['is-left'] = dynser.from_bool(branch == 0)
       rules:
         - linear: { pattern: 'left' }
         - linear: { pattern: 'right' }

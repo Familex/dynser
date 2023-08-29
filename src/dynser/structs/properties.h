@@ -179,9 +179,11 @@ public:
 #undef DYNSER_POPULATE_AS
 };
 
+Properties operator<<(Properties& lhs, Properties&& rhs) noexcept;
+
 Properties operator<<(Properties&& lhs, Properties&& rhs) noexcept;
 
-Properties operator<<(Properties&& lhs, Properties const& rhs) noexcept;
+Properties operator<<(Properties& lhs, Properties const& rhs) noexcept;
 
 void register_userdata_property_value(luwra::StateWrapper& state) noexcept;
 

@@ -26,7 +26,7 @@ inline Map add_prefix(const Map& map, const std::string_view prefix, Prefixes&&.
 }
 
 /**
- * brief filders keys what starts with prefix and remove this prefix from it.
+ * \brief filters keys what starts with prefix and remove this prefix from it.
  */
 template <typename Map>
 inline Map remove_prefix(const Map& props, const std::string_view prefix) noexcept

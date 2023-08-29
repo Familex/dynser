@@ -14,7 +14,7 @@ TEST_CASE("Regex to string")
     };
 
     Test tests[]{
-        { "(?:[)](\\w+)){2}", { { 2, "word" } } },                   //
+        { R"((?:[)](\w+)){2})", { { 1, "word" } } },                 //
         { R"((?:\)\(\[\][\]]){2,})", {} },                           //
         { "[[\\]]", {} },                                            //
         { "[\\][]", {} },                                            //
@@ -43,17 +43,17 @@ TEST_CASE("Regex to string")
 
             if (!string && !test.resolve_error_group_num) {
                 INFO("resolve error on " << string.error().group_num << " group");
-                CHECK(false);
+                FAIL();
             }
             else if (!string && string.error().group_num != test.resolve_error_group_num) {
                 INFO(
                     "expected resolve error group num: "
                     << *test.resolve_error_group_num << " not equal to actual group num: " << string.error().group_num
                 );
-                CHECK(false);
+                FAIL();
             }
             else {
-                CHECK(true);
+                SUCCEED();
             }
         }
         ++num;
