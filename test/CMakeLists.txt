@@ -99,7 +99,7 @@ foreach (targ ${tests})
     # cpp version
     set_property (TARGET ${targ} PROPERTY CXX_STANDARD 23)
 
-    if (MSVC)
+    if ((MSVC) AND (MSVC_VERSION GREATER_EQUAL 1914))
         target_compile_options (${targ} PUBLIC "/Zc:__cplusplus")
     endif ()
 
