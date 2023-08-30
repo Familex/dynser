@@ -670,7 +670,7 @@ class DynSer
     {
         return [&](const Existing& nested) noexcept -> dynser::SerializeResult {
             // remove prefix if exists
-            const auto without_prefix = nested.prefix ? util::remove_prefix(props, *nested.prefix) : props;
+            Properties without_prefix = nested.prefix ? util::remove_prefix(props, *nested.prefix) : props;
             // replace parent props with child (existing) props
             // FIXME not obvious behavior, must be documented at least
             const auto inp = util::remove_prefix(without_prefix, nested.tag) << without_prefix;

@@ -1,22 +1,5 @@
 #include "properties.h"
 
-dynser::Properties dynser::operator<<(dynser::Properties& lhs, dynser::Properties&& rhs) noexcept
-{
-    lhs.merge(rhs);
-    return lhs;
-}
-
-dynser::Properties dynser::operator<<(dynser::Properties&& lhs, dynser::Properties&& rhs) noexcept
-{
-    return lhs << rhs;
-}
-
-dynser::Properties dynser::operator<<(dynser::Properties& lhs, dynser::Properties const& rhs) noexcept
-{
-    lhs.merge(dynser::Properties{ rhs });
-    return lhs;
-}
-
 void dynser::register_userdata_property_value(luwra::StateWrapper& state) noexcept
 {
     state.registerUserType<dynser::PropertyValue>(

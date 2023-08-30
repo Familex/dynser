@@ -179,11 +179,11 @@ public:
 #undef DYNSER_POPULATE_AS
 };
 
-Properties operator<<(Properties& lhs, Properties&& rhs) noexcept;
-
-Properties operator<<(Properties&& lhs, Properties&& rhs) noexcept;
-
-Properties operator<<(Properties& lhs, Properties const& rhs) noexcept;
+template <typename Rhs>
+inline Properties operator<<(Properties&& lhs, Rhs&& rhs) noexcept {
+    lhs.merge(std::forward<Rhs>(rhs));
+    return lhs;
+}
 
 void register_userdata_property_value(luwra::StateWrapper& state) noexcept;
 
