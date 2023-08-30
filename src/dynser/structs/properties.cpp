@@ -40,7 +40,8 @@ void dynser::register_userdata_property_value(luwra::StateWrapper& state) noexce
         { "from_string", LUWRA_WRAP(dynser::PropertyValue::from_string) },
         { "from_bool", LUWRA_WRAP(dynser::PropertyValue::from_bool) },
         { "from_char", LUWRA_WRAP(dynser::PropertyValue::from_char) },
-        // FIXME 'read': no matching overloaded function found error
+        // 'read': no matching overloaded function found error
+        // luwra can't read std::vector's
         // { "from_list", LUWRA_WRAP(dynser::PropertyValue::from_list) },
         { "from_properties", LUWRA_WRAP(dynser::PropertyValue::from_properties) },
     };
