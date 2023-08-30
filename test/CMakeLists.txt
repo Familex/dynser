@@ -56,6 +56,7 @@ add_executable (
     deserialize/common.hpp
 
     deserialize/continual.hpp
+    deserialize/recursive.hpp
     deserialize/regex.hpp
 
     deserialize/tests.cpp

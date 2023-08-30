@@ -70,12 +70,6 @@ struct Foo
     constexpr auto operator<=>(Foo const&) const = default;
 };
 
-template <typename Target>
-using TestCases = std::pair<std::string, Target>[];
-
-template <typename Target>
-using TestCasesWithCtx = std::tuple<std::string, Target, dynser::Context>[];
-
 TEST_CASE("Continual")
 {
     using namespace dynser_test;

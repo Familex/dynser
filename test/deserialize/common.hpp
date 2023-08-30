@@ -5,8 +5,17 @@
 #include "util_common.hpp"
 #include <catch2/catch_test_macros.hpp>
 
+#include <string>
+#include <tuple>
+
 namespace dynser_test
 {
+
+template <typename Target>
+using TestCases = std::pair<std::string, Target>[];
+
+template <typename Target>
+using TestCasesWithCtx = std::tuple<std::string, Target, dynser::Context>[];
 
 #define DYNSER_TEST_DESERIALIZE_WITH_CONTEXT(target_type, target, tag, expected, context_)                             \
     ser.context = context_;                                                                                            \

@@ -3,25 +3,51 @@
 version: ''
 tags:
   - name: "recursive"
+    branched:
+      branching-script: |
+        -- count array len by counting props
+        local array_len = 0
+        for _ in pairs(inp) do array_len = array_len + 1 end
+
+        if array_len == 0 then
+          branch = 0
+        elseif array_len == 1 then
+          branch = 1
+        else
+          branch = 2
+        end
+      debranching-script: ''
+      rules:
+          - linear: { pattern: '\[ \]' }
+          - existing: { tag: "recursive-one-el" }
+          - existing: { tag: "recursive-general" }
+  - name: "recursive-one-el"
     continual:
       - linear: { pattern: '\[ ' }
-      - existing: { tag: "recursive-payload" }
-      - linear: { pattern: '-?\d+', fields: { 0: last-element } }
+      - existing: { tag: "recursive-last-el" }
       - linear: { pattern: ' \]' }
-    serialization-script: |
-      out['last-element'] = tostring(inp['last-element']:as_i32())
-    deserialization-script: |
-      out['last-element'] = tonumber(inp['last-element'])
-  - name: "recursive-payload"
+  - name: "recursive-general"
+    continual:
+      - linear: { pattern: '\[ ' }
+      - existing: { tag: "recursive-general-payload" }
+      - existing: { tag: "recursive-last-el" }
+      - linear: { pattern: ' \]' }
+  - name: "recursive-general-payload"
     continual:
       - linear: { pattern: '(-?\d+), ', fields: { 1: element } }
-      - existing: { tag: "recursive-payload", prefix: "next", required: false }
+      - existing: { tag: "recursive-general-payload", prefix: "next", required: false }
     serialization-script: |
       if inp['element'] ~= nil then
         out['element'] = tostring(inp['element']:as_i32())
       end
       -- else do nothing and trigger check in c++ code
     deserialization-script: |
-      -- recursion exit?
-      out['element'] = tonumber(inp['element'])
+      out['element'] = dynser.from_i32(tonumber(inp['element']))
+  - name: "recursive-last-el"
+    continual:
+      - linear: { pattern: '-?\d+', fields: { 0: last-element } }
+    serialization-script: |
+      out['last-element'] = tostring(inp['last-element']:as_i32())
+    deserialization-script: |
+      out['last-element'] = dynser.from_i32(tonumber(inp['last-element']))
 ...

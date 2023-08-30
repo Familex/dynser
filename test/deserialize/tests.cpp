@@ -2,6 +2,7 @@
 
 // clang-format off
 #include "continual.hpp"
+#include "recursive.hpp"
 #include "regex.hpp"
 // clang-format on
 
