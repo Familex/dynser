@@ -1,16 +1,17 @@
-# Visual studio CMake artifacts
+#### visual studio cmake artifacts ####
 .vs/
 out/
+# clangd search confg in this dir
 build/
 
-# My files
+#### my files ####
 .todo
 private_*
 private/
 
-# Test prepared configs
+#### test prepared configs ####
 **/configs/*.yaml.raw
 
-# Other artifacts
+#### other artifacts ####
 .cache/
 
