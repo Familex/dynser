@@ -2,6 +2,7 @@
 
 #include "dynser.h"
 #include "printer.hpp"
+#include "util_common.hpp"
 #include <catch2/catch_test_macros.hpp>
 
 namespace dynser_test
@@ -230,12 +231,6 @@ auto get_dynser_instance() noexcept
         REQUIRE(serialized);                                                                                           \
         CHECK(*serialized == expected);                                                                                \
         ser.context.clear();                                                                                           \
-    } while (false);
-
-#define DYNSER_LOAD_CONFIG(ser, config)                                                                                \
-    do {                                                                                                               \
-        const auto load_result = ser.load_config(config);                                                              \
-        REQUIRE(load_result);                                                                                          \
     } while (false);
 
 }    // namespace dynser_test

@@ -1,5 +1,6 @@
 #include "dynser.h"
 #include "printer.hpp"
+#include "util_common.hpp"
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
 
@@ -15,13 +16,10 @@ TEST_CASE("Serialize")
         // to prevent optimizations
         config::ParseResult config_load_result;
 
-        const auto config =
-#include "../configs/benchmark_serialize.yaml.raw"
-            ;
-
         BENCHMARK("load config")
         {
-            const auto load_result{ ser.load_config(config::RawContents{ config }) };
+            const auto load_result{ ser.load_config(config::FileName{
+                dynser_test::path_to_config("benchmark_serialize.yaml") }) };
             config_load_result = load_result;
             return load_result;
         };

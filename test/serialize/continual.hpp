@@ -4,13 +4,9 @@ TEST_CASE("Continual rule #0")
 {
     using namespace dynser_test;
 
-    const auto config =
-#include "../configs/continual.yaml.raw"
-        ;
-
     auto ser = get_dynser_instance();
 
-    DYNSER_LOAD_CONFIG(ser, dynser::config::RawContents{ config });
+    DYNSER_LOAD_CONFIG_FILE(ser, "continual.yaml");
 
     SECTION("'Foo' rule", "[continual] [existing] [linear] [dyn-groups]")
     {
@@ -58,30 +54,9 @@ TEST_CASE("Overlapping properties")
 {
     using namespace dynser_test;
 
-    const auto config = R"##(---
-version: ''
-tags:
-  - name: quux
-    continual:
-      - linear: { pattern: '-?\d+', fields: { 0: value } }
-    serialization-script: |
-      out['value'] = tostring(inp['value']:as_i32())
-  
-  - name: quuux
-    continual:
-      - existing: { tag: "quux" }
-      - linear: { pattern: ' ## ' }
-      - linear: { pattern: '-?\d+', fields: { 0: value } }
-    serialization-script: |
-      out['value'] = tostring(inp['value']:as_i32())
-...)##";
-
     auto ser = get_dynser_instance();
 
-    const auto result = ser.load_config(dynser::config::RawContents{ config });
-
-    INFO("Config: " << config);
-    REQUIRE(result);
+    DYNSER_LOAD_CONFIG_FILE(ser, "overlapping_properties.yaml");
 
     {
         const std::pair<Quuux, std::string> quuuxs[]{

@@ -11,22 +11,9 @@ TEST_CASE("Error cases")
 
     SECTION("invalid regex in config")
     {
-        const auto config = R"##(---
-version: ''
-tags:
-  - name: "1"
-    continual: [ linear: { pattern: ':(' } ]
-  - name: "2"
-    continual: [ linear: { pattern: '+' } ]
-  - name: "3"
-    continual: [ linear: { pattern: ')' } ]
-  - name: "4"
-    continual: [ linear: { pattern: '\' } ]
-...)##";
+        DYNSER_LOAD_CONFIG_FILE(ser, "invalid_regex.yaml");
 
-        DYNSER_LOAD_CONFIG(ser, config::RawContents{ config });
-
-        for (auto const tag : { "1", "2", "3", "4" }) {
+        for (auto const tag : { "a", "b", "c", "d" }) {
             DYNAMIC_SECTION("Tag: " << tag)
             {
                 const auto serialize_result{ ser.serialize_props(dummy_props, tag) };
@@ -47,39 +34,9 @@ tags:
 
     SECTION("no value")
     {
-        const auto config = R"##(---
-version: ''
-tags:
-  - name: "1"
-    continual: [ linear: { pattern: '.+', fields: { 0: value } } ]
-  - name: "2"
-    continual: [ linear: { pattern: '.+', fields: { 1: value } } ]
-  - name: "3"
-    continual: [ existing: { tag: "2" } ]
-  - name: "4"
-    branched: { branching-script: 'branch = 0', debranching-script: '', rules: [ existing: { tag: "3" } ] }
-  - name: "5"
-    branched: { branching-script: 'branch = 0', debranching-script: '', rules: [ existing: { tag: "4" } ] }
-  - name: "6"
-    branched: { branching-script: 'branch = 0', debranching-script: '', rules: [ linear: { pattern: '.+', fields: { 0: value } } ] }
-# there is no 'value', but longest list is 0 length
-# - name: ""
-#   recurrent: [ linear: { pattern: '.+', fields: { 0: value } } ]
-# - name: ""
-#   recurrent: [ existing: { tag: "6" } ]
-# request for two lists and not set one of them
-  - name: "7"
-    recurrent:
-      - existing: { tag: "5" }
-      - linear: { pattern: '.+', fields: { 0: 'value-7' } }
-    serialization-script: |
-      out['value-7'] = inp['value-7']:as_string()
-...)##";
+        DYNSER_LOAD_CONFIG_FILE(ser, "no_value_error_case.yaml");
 
-        DYNSER_LOAD_CONFIG(ser, config::RawContents{ config });
-
-        for (std::size_t tag_i{ 1 }; tag_i <= 7; ++tag_i) {
-            const auto tag = std::to_string(tag_i);
+        for (auto const tag : { "a", "b", "c", "d", "e", "f", "g" }) {
 
             DYNAMIC_SECTION("Tag: " << tag)
             {
@@ -104,7 +61,7 @@ tags:
 
     SECTION("invalid tags")
     {
-        DYNSER_LOAD_CONFIG(ser, config::RawContents{ "{ version: '', tags: [] }" });
+        DYNSER_LOAD_CONFIG_FILE(ser, "empty.yaml");
 
         for (auto const tag : { "0", "7", "tag", "unnamed", "test", "foo" }) {
             DYNAMIC_SECTION("Tag: " << tag)

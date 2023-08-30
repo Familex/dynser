@@ -68,7 +68,6 @@ add_executable (
 )
 
 set ("include-util-dir" "serialize-tests" "benchmark-tests" "deserialize-tests")
-set ("need-configs" "serialize-tests" "benchmark-tests" "deserialize-tests")
 set ("tests" "internal-tests" "benchmark-tests" "serialize-tests" "catch-test" "deserialize-tests")
 set ("dynser-tests" "internal-tests" "benchmark-tests" "serialize-tests" "deserialize-tests")
 
@@ -77,21 +76,6 @@ foreach (targ ${include-util-dir})
         ${targ}
         PRIVATE
         "util/"
-    )
-endforeach ()
-
-# FIXME add_dependencies doesn't work
-include ("${CMAKE_CURRENT_SOURCE_DIR}/cmake/process_configs.cmake")
-
-add_custom_target (
-    process-configs
-    COMMAND ${CMAKE_COMMAND} -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/process_configs.cmake"
-)
-
-foreach (targ ${need-configs})
-    add_dependencies (
-        ${targ}
-        process-configs
     )
 endforeach ()
 
@@ -114,6 +98,10 @@ foreach (targ ${tests})
 
     # cpp version
     set_property (TARGET ${targ} PROPERTY CXX_STANDARD 23)
+
+    if (MSVC)
+        target_compile_options (${targ} PUBLIC "/Zc:__cplusplus")
+    endif ()
 
     target_link_libraries (${targ} PRIVATE Catch2::Catch2WithMain)
 

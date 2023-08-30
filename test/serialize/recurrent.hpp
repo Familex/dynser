@@ -4,13 +4,9 @@ TEST_CASE("Recurrent rule")
 {
     using namespace dynser_test;
 
-    const auto config =
-#include "../configs/recurrent.yaml.raw"
-        ;
-
     auto ser = get_dynser_instance();
 
-    DYNSER_LOAD_CONFIG(ser, dynser::config::RawContents{ config });
+    DYNSER_LOAD_CONFIG_FILE(ser, "recurrent.yaml");
 
     SECTION("'Pos-list' rule", "[recurrent]")
     {

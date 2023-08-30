@@ -1,0 +1,27 @@
+---
+# yaml-language-server: $schema=../../doc/dynser_config_schema.json
+version: ''
+tags:
+  - name: "variant-struct"
+    branched:
+      branching-script: |
+        branch = inp['is_a']:as_bool() and 0 or 1
+      debranching-script: |
+        not implemented
+      rules:
+        - existing: { tag: "variant-struct-a" }
+        - existing: { tag: "variant-struct-b" }
+  
+  - name: "variant-struct-a"
+    continual:
+      - linear: { pattern: '-?\d+', fields: { 0: value } }
+    serialization-script: |
+      out['value'] = tostring(inp['value']:as_i32())
+  
+  - name: "variant-struct-b"
+    continual:
+      - linear: { pattern: '((?:true)|(?:false));(\d+)', fields: { 2: value, 1: some_bool } }
+    serialization-script: |
+      out['value'] = tostring(inp['value']:as_u32())
+      out['some_bool'] = inp['some_bool']:as_bool() and 'true' or 'false'
+...

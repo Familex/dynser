@@ -28,11 +28,7 @@ TEST_CASE("Regex")
         dynser::generate_target_to_property_mapper(),
     };
 
-    const auto config =
-#include "../configs/regex.yaml.raw"
-        ;
-
-    DYNSER_LOAD_CONFIG(ser, dynser::config::RawContents{ config });
+    DYNSER_LOAD_CONFIG_FILE(ser, "regex.yaml");
 
     char const* const regexes[]{
         // empty | empty group

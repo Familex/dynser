@@ -90,11 +90,7 @@ TEST_CASE("Continual")
         dynser::generate_target_to_property_mapper(),
     };
 
-    const auto config =
-#include "../configs/continual.yaml.raw"
-        ;
-
-    DYNSER_LOAD_CONFIG(ser, dynser::config::RawContents{ config });
+    DYNSER_LOAD_CONFIG_FILE(ser, "continual.yaml");
 
     SECTION("Pos")
     {

@@ -4,13 +4,9 @@ TEST_CASE("Recursive rule")
 {
     using namespace dynser_test;
 
-    const auto config =
-#include "../configs/recursive.yaml.raw"
-        ;
-
     auto ser = get_dynser_instance();
 
-    DYNSER_LOAD_CONFIG(ser, dynser::config::RawContents{ config });
+    DYNSER_LOAD_CONFIG_FILE(ser, "recursive.yaml");
 
     SECTION("'recursive' rule", "[continual] [recursive] [existing] [linear] [required]")
     {
