@@ -24,6 +24,6 @@ tags:
       out['x'] = tostring(inp['x']:as_i32())
       out['y'] = tostring(inp['y']:as_i32())
     deserialization-script: |
-      out['x'] = tonumber(inp['x'])
-      out['y'] = tonumber(inp['y'])
+      out['x'] = dynser.from_i32(tonumber(inp['x']))
+      out['y'] = dynser.from_i32(tonumber(inp['y']))
 ...

@@ -423,7 +423,7 @@ DeserializeResult<std::pair<Properties, std::string_view>> deserialize_to_props(
     std::string_view const tag
 ) noexcept;
 
-struct ProcessContinualOrBranchedRuleResult
+struct DeserializeRuleToPropsResult
 {
     Fields fields{};
     Properties properties{};
@@ -432,14 +432,14 @@ struct ProcessContinualOrBranchedRuleResult
 
 // FIXME out-params not required
 template <typename Rule>
-DeserializeResult<ProcessContinualOrBranchedRuleResult> process_continual_or_branched_rule(
+DeserializeResult<DeserializeRuleToPropsResult> deserialize_rule_to_props(
     Context& context,
     config::Config const& config,
     Rule const& rule,
     std::string_view const sv
 ) noexcept
 {
-    using ResultSuccess = ProcessContinualOrBranchedRuleResult;
+    using ResultSuccess = DeserializeRuleToPropsResult;
     using Result = DeserializeResult<ResultSuccess>;
 
     return util::visit_one_terminated(
@@ -533,8 +533,8 @@ DeserializeResult<std::pair<Properties, std::string_view>> deserialize_to_props(
             std::string_view curr_sv{ sv };
             Properties properties{};
             Fields fields{};
-            for (std::size_t rule_ind{}; auto const& rule : nested) {
-                auto process_result = process_continual_or_branched_rule(context, config, rule, curr_sv);
+            for (auto const& rule : nested) {
+                auto process_result = deserialize_rule_to_props(context, config, rule, curr_sv);
                 if (!process_result) {
                     // FIXME add err_ref?
                     return std::unexpected{ process_result.error() };
@@ -542,9 +542,9 @@ DeserializeResult<std::pair<Properties, std::string_view>> deserialize_to_props(
                 fields.merge(process_result->fields);
                 properties.merge(process_result->properties);
                 curr_sv = process_result->sv;
-                ++rule_ind;
             }
 
+            // FIXME separate into function
             if (auto const& script = curr_tag.deserialization_script) {
                 luwra::StateWrapper state;
                 state.loadStandardLibrary();
@@ -567,10 +567,6 @@ DeserializeResult<std::pair<Properties, std::string_view>> deserialize_to_props(
 
             return std::make_pair(properties, curr_sv);
         },
-        [&](config::yaml::Recurrent const& nested) -> Result {
-            // FIMXE
-            return {};
-        },
         [&](config::yaml::Branched const& nested) -> Result {
             // find longest (not first) matching rule
             Properties longest_result{};
@@ -580,8 +576,7 @@ DeserializeResult<std::pair<Properties, std::string_view>> deserialize_to_props(
             {
                 std::optional<std::size_t> result_len{};
                 for (std::size_t rule_ind{}; rule_ind < nested.rules.size(); ++rule_ind) {
-                    auto process_result =
-                        process_continual_or_branched_rule(context, config, nested.rules[rule_ind], sv);
+                    auto process_result = deserialize_rule_to_props(context, config, nested.rules[rule_ind], sv);
 
                     if (process_result) {
                         auto const rule_len = sv.size() - process_result->sv.size();
@@ -631,6 +626,112 @@ DeserializeResult<std::pair<Properties, std::string_view>> deserialize_to_props(
             }
 
             return std::make_pair(longest_result, *sv_rem);
+        },
+        [&](config::yaml::Recurrent const& nested) -> Result {
+            using VecFieldsValue = std::vector<Fields::mapped_type>;
+            using VecFields = std::map<Fields::key_type, VecFieldsValue>;
+            VecFields vec_fields{};
+            Properties properties{};
+            std::string_view curr_sv{ sv };
+            std::optional<Result> infix_error_sus{};
+            bool parsed{ false };
+
+            for (bool is_last_sus{ false }; !curr_sv.empty() && !parsed;) {
+                for (bool is_first_rule{ true }; auto const& rule : nested) {
+                    // infix rule failed on prefious loop, but first rule parsed successfully
+                    if (!is_first_rule && is_last_sus) {
+                        assert(infix_error_sus);
+                        return *infix_error_sus;
+                    }
+                    auto process_result = deserialize_rule_to_props(context, config, rule, curr_sv);
+                    if (process_result) {
+                        for (auto const& [key, val] : process_result->properties) {
+                            if (properties.contains(key)) {
+                                properties.at(key).as_list().push_back(val);
+                            }
+                            else {
+                                properties[key] = PropertyValue{ PropertyValue::ListType<PropertyValue>{ val } };
+                            }
+                        }
+                        for (auto const& [key, val] : process_result->fields) {
+                            if (vec_fields.contains(key)) {
+                                vec_fields.at(key).push_back(val);
+                            }
+                            else {
+                                vec_fields[key] = VecFieldsValue{ val };
+                            }
+                        }
+                        curr_sv = process_result->sv;
+                    }
+                    else {
+                        // first rule failed as intended
+                        // infix errors ignored as indended
+                        if (is_first_rule) {
+                            parsed = true;
+                            break;
+                        }
+                        else if (std::holds_alternative<config::yaml::RecInfix>(rule)) {
+                            is_last_sus = true;
+                            // remember first infix parse error
+                            if (!infix_error_sus) {
+                                infix_error_sus = std::unexpected{ process_result.error() };
+                            }
+                        }
+                        else {
+                            // FIXME add err_ref?
+                            return std::unexpected{ process_result.error() };
+                        }
+                    }
+                    is_first_rule = false;
+                }
+            }
+
+            if (auto const& script = curr_tag.deserialization_script) {
+                if (!vec_fields.empty()) {
+                    // FIXME is it valid way?
+                    std::size_t max_size{ vec_fields.begin()->second.size() };
+                    for (auto const& [_, val] : vec_fields) {
+                        max_size = std::max(max_size, val.size());
+                    }
+                    for (std::size_t ind{}; ind < max_size; ++ind) {
+                        Fields fields{};
+                        for (auto const& [key, val] : vec_fields) {
+                            if (val.size() > ind) {
+                                fields[key] = val[ind];
+                            }    // else FIXME what to do there
+                        }
+                        // FIXME separate into function
+                        {
+                            luwra::StateWrapper state;
+                            state.loadStandardLibrary();
+                            register_userdata_property_value(state);
+                            state[config::keywords::CONTEXT] = context;
+                            state[config::keywords::INPUT_TABLE] = fields;
+                            state[config::keywords::OUTPUT_TABLE] = dynser::Properties{};
+                            auto const script_run_result = state.runString(script->c_str());
+                            if (script_run_result != LUA_OK) {
+                                auto const error = state.read<std::string>(-1);
+                                return make_deserialize_err<ResultSuccess>(deserialize_err::ScriptError{ error }, sv);
+                            }
+                            auto const table =
+                                state[config::keywords::OUTPUT_TABLE].read<std::map<std::string, luwra::Reference>>();
+                            for (auto const& [key, val] : table) {
+                                if (properties.contains(key)) {
+                                    // FIXME possible branch?
+                                    // FIXME check if type is correct (calls abort() if not)
+                                    properties.at(key).as_list().push_back(val);
+                                }
+                                else {
+                                    // FIXME check if type is correct (calls abort() if not)
+                                    properties[key] = PropertyValue{ PropertyValue::ListType<PropertyValue>{ val } };
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return std::make_pair(properties, curr_sv);
         },
         [&](config::yaml::RecurrentDict const& nested) -> Result {
             // FIXME
