@@ -19,7 +19,7 @@ TEST_CASE("Serialize")
         BENCHMARK("load config")
         {
             const auto load_result{ ser.load_config(config::FileName{
-                dynser_test::path_to_config("benchmark_serialize.yaml") }) };
+                dynser_test::path_to_config("benchmark.yaml") }) };
             config_load_result = load_result;
             return load_result;
         };

@@ -30,6 +30,7 @@ add_executable (
     util/printer.hpp
 
     benchmark/serialize.hpp
+    benchmark/deserialize.hpp
 
     benchmark/tests.cpp
 )
