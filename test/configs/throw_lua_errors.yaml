@@ -2,26 +2,26 @@
 # yaml-language-server: $schema=../../doc/dynser_config_schema.json
 version: ''
 tags:
-  - name: "pos"
-    continual:
-      - linear:
-          pattern: '(-?\d+), (-?\d+)'
-          fields:
-            1: x
-            2: y
-    serialization-script: |
-      out['x'] = ''; out['y'] = ''
-      local x = inp['x']:as_i32()
-      local y = inp['y']:as_i32()
-      if x < 10 then
-        error('x < 10')
-      elseif x > 20 then
-        error('x > 20')
-      elseif y < 0 then
-        error('y < 0')
-      elseif y > 10000 then
-        error('y > 10000')
-      end
-      error('all ok')
-    deserialization-script: ''
+- name: "pos"
+  continual:
+  - linear:
+      pattern: '(-?\d+), (-?\d+)'
+      fields:
+        1: x
+        2: y
+  serialization-script: |
+    out['x'] = ''; out['y'] = ''
+    local x = inp['x']:as_i32()
+    local y = inp['y']:as_i32()
+    if x < 10 then
+      error('x < 10')
+    elseif x > 20 then
+      error('x > 20')
+    elseif y < 0 then
+      error('y < 0')
+    elseif y > 10000 then
+      error('y > 10000')
+    end
+    error('all ok')
+  deserialization-script: ''
 ...

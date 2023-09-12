@@ -203,13 +203,18 @@ struct Printer
 
 namespace Catch
 {
-template <>
-struct StringMaker<dynser::SerializeResult>
+template <typename T>
+struct StringMaker<dynser::SerializeResult<T>>
 {
-    static std::string convert(dynser::SerializeResult const& value)
+    static std::string convert(dynser::SerializeResult<T> const& value)
     {
         if (value) {
-            return *value;
+            if constexpr (std::is_same_v<T, std::string>) {
+                return *value;
+            }
+            else {
+                return std::format("<{}>", typeid(T).name());
+            }
         }
         else {
             return dynser_test::Printer::serialize_err_to_string(value.error());

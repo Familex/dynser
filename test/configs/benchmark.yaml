@@ -2,27 +2,29 @@
 # yaml-language-server: $schema=../../doc/dynser_config_schema.json
 version: ''
 tags:
-  - name: "continual-without-fields"
-    continual:
-      - linear: { pattern: 'lorem ipsum' }
-      - linear: { pattern: '(?:lorem ipsum){20}' }
-      - linear: { pattern: '.' }
-  - name: "empty"
-    continual: []
-  - name: "minimal-lua"
-    continual:
-      - linear: { pattern: '.*', fields: { 0: value } }
-    serialization-script: |
-      out['value'] = inp['value']:as_string()
-  - name: "recurrent-empty"
-    recurrent:
-      - linear: { pattern: '.*', fields: { 0: len-expander } }
-    serialization-script: |
-      out['len-expander'] = inp['len-expander']:as_string()
-  - name: "recurrent-existing-empty"
-    recurrent:
-      - linear: { pattern: '.*', fields: { 0: len-expander } }
-      - existing: { tag: "empty" }
-    serialization-script: |
-      out['len-expander'] = inp['len-expander']:as_string()
+- name: "continual-without-fields"
+  continual:
+  - linear: { pattern: 'lorem ipsum' }
+  - linear: { pattern: '(?:lorem ipsum){20}' }
+  - linear: { pattern: '.' }
+- name: "empty"
+  continual: []
+- name: "minimal-lua"
+  continual:
+  - linear: { pattern: '.*', fields: { 0: value } }
+  serialization-script: |
+    out['value'] = inp['value']:as_string()
+- name: "recurrent-empty"
+  recurrent:
+    rules:
+    - linear: { pattern: '.*', fields: { 0: len-expander } }
+  serialization-script: |
+    out['len-expander'] = inp['len-expander']:as_string()
+- name: "recurrent-existing-empty"
+  recurrent:
+    rules:
+    - linear: { pattern: '.*', fields: { 0: len-expander } }
+    - existing: { tag: "empty" }
+  serialization-script: |
+    out['len-expander'] = inp['len-expander']:as_string()
 ...

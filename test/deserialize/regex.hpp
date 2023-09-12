@@ -31,6 +31,7 @@ TEST_CASE("Regex")
     DYNSER_LOAD_CONFIG_FILE(ser, "regex.yaml");
 
     char const* const regexes[]{
+        R"()",
         // empty | empty group
         R"(|())",
         R"([abc]([^D])(?:u))",
@@ -41,7 +42,6 @@ TEST_CASE("Regex")
         R"((test)\1(\1)\2)",
         // quantifiers
         R"(a*b+c+?d*?ef{10,}g{10,20}h{10,}?j{10,20}?)",
-        R"()",
         // it works because CharacterClass::characters contains raw "a" and "\a"
         R"(abc\a\b\c\..+\z*?\[\]\(\)\?\+\!\=\"\'\@\#\$\%\\[a-z][a-zA-Z])",
     };

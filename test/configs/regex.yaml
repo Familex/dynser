@@ -2,137 +2,140 @@
 # yaml-language-server: $schema=../../doc/dynser_config_schema.json
 version: ''
 tags:
-  - name: "regex"
-    recurrent-dict:
-      key: 'value'
-      tag: "token"
-  - name: "token"
-    branched:
-      branching-script: |
-        local type = inp['type']:as_string()
-        if type == "empty" then
-           branch = 0
-        elseif type == "group" then
-           branch = 1
-        elseif type == "non-capturing-group" then
-           branch = 2
-        elseif type == "backreference" then
-           branch = 3
-        elseif type == "lookup" then
-           branch = 4
-        elseif type == "character-class" then
-           branch = 5
-        elseif type == "disjunction" then
-           branch = 6
-        elseif type == "regex" then
-           branch = 7
-        end
-      debranching-script: ''
-      rules:
-        - existing: { tag: "empty" }
-        - existing: { tag: "group" }
-        - existing: { tag: "non-capturing-group" }
-        - existing: { tag: "backreference" }
-        - existing: { tag: "lookup" }
-        - existing: { tag: "character-class" }
-        - existing: { tag: "disjunction" }
-        - existing: { tag: "regex", prefix: 'value' }
-  - name: "empty"
-    continual: []
-  - name: "group"
-    continual:
-      - linear: { pattern: '\(' }
-      - existing: { tag: "regex", prefix: 'inner' }
-      - linear: { pattern: '\)' }
-      - existing: { tag: "quantifier" }
-  - name: "non-capturing-group"
-    continual:
-      - linear: { pattern: '\(\?\:' }
-      - existing: { tag: "regex", prefix: 'inner' }
-      - linear: { pattern: '\)' }
-      - existing: { tag: "quantifier" }
-  - name: "backreference"
-    continual:
-      - linear: { pattern: '\\(\d+)', fields: { 1: 'group-number' } }
-      - existing: { tag: "quantifier" }
-    serialization-script: |
-      out['group-number'] = inp['group-number']:as_u64()
-  - name: "lookup"
-    continual:
-      - linear: { pattern: '\(\?(\<?)([=!])', fields: { 1: 'backward-sign', 2: 'negative-sign' } }
-      - existing: { tag: "regex", prefix: 'inner' }
-      - linear: { pattern: '\)' }
-    serialization-script: |
-      out['backward-sign'] = inp['is-forward']:as_bool() and '' or '<'
-      out['negative-sign'] = inp['is-negative']:as_bool() and '!' or '='
-  - name: "character-class"
-    continual:
-      - linear: { pattern: '\[?', fields: { 0: 'open-bracket-sign' } }
-      - linear: { pattern: '\^?', fields: { 0: 'negative-sign' } }
-      - linear: { pattern: '.+', fields: { 0: 'characters' } }
-      - linear: { pattern: '\]?', fields: { 0: 'close-bracket-sign' } }
-      - existing: { tag: "quantifier" }
-    serialization-script: |
-      out['characters'] = inp['characters']:as_string()
-      local content = inp['characters']:as_string()
-      local is_content_one_symbol = content:len() == 1 or content:len() == 2 and content:sub(0, 1) == '\\'
-      local is_negative = inp['is-negative']:as_bool()
-      if is_negative then
-        out['open-bracket-sign'] = '['
-        out['close-bracket-sign'] = ']'
-        out['negative-sign'] = '^'
-      elseif not is_content_one_symbol then
-        out['open-bracket-sign'] = '['
-        out['close-bracket-sign'] = ']'
-        out['negative-sign'] = ''
-      else
-        out['open-bracket-sign'] = ''
-        out['close-bracket-sign'] = ''
-        out['negative-sign'] = ''
+- name: "regex"
+  recurrent:
+    mapping-settings:
+      type: 'array-of-dicts'
+      root-key: 'value'
+    rules:
+    - existing: { tag: "token" }
+- name: "token"
+  branched:
+    branching-script: |
+      local type = inp['type']:as_string()
+      if type == "empty" then
+          branch = 0
+      elseif type == "group" then
+          branch = 1
+      elseif type == "non-capturing-group" then
+          branch = 2
+      elseif type == "backreference" then
+          branch = 3
+      elseif type == "lookup" then
+          branch = 4
+      elseif type == "character-class" then
+          branch = 5
+      elseif type == "disjunction" then
+          branch = 6
+      elseif type == "regex" then
+          branch = 7
       end
-  - name: "disjunction"
-    continual:
-      - existing: { tag: "token", prefix: 'left' }
-      - linear: { pattern: '\|' }
-      - existing: { tag: "token", prefix: 'right' }
-  - name: "quantifier"
-    branched:
-      branching-script: |
-        local from = inp['from']:as_u64()
-        local to = inp['to'] and inp['to']:as_u64() or nil
-        local is_lazy = inp['is-lazy']:as_bool()
-        if from == 1 and to and to == 1 then
-          branch = 0 -- without quantifier
-        elseif from == 0 and to == nil then
-          if is_lazy then
-            branch = 1 -- *?
-          else
-            branch = 2 -- *
-          end
-        -- +
-        elseif from == 1 and to == nil then
-          if is_lazy then
-            branch = 3 -- +?
-          else
-            branch = 4 -- +
-          end
-        -- {\d+,}
+    debranching-script: ''
+    rules:
+    - existing: { tag: "empty" }
+    - existing: { tag: "group" }
+    - existing: { tag: "non-capturing-group" }
+    - existing: { tag: "backreference" }
+    - existing: { tag: "lookup" }
+    - existing: { tag: "character-class" }
+    - existing: { tag: "disjunction" }
+    - existing: { tag: "regex", prefix: 'value' }
+- name: "empty"
+  continual: []
+- name: "group"
+  continual:
+  - linear: { pattern: '\(' }
+  - existing: { tag: "regex", prefix: 'inner' }
+  - linear: { pattern: '\)' }
+  - existing: { tag: "quantifier" }
+- name: "non-capturing-group"
+  continual:
+  - linear: { pattern: '\(\?\:' }
+  - existing: { tag: "regex", prefix: 'inner' }
+  - linear: { pattern: '\)' }
+  - existing: { tag: "quantifier" }
+- name: "backreference"
+  continual:
+  - linear: { pattern: '\\(\d+)', fields: { 1: 'group-number' } }
+  - existing: { tag: "quantifier" }
+  serialization-script: |
+    out['group-number'] = inp['group-number']:as_u64()
+- name: "lookup"
+  continual:
+  - linear: { pattern: '\(\?(\<?)([=!])', fields: { 1: 'backward-sign', 2: 'negative-sign' } }
+  - existing: { tag: "regex", prefix: 'inner' }
+  - linear: { pattern: '\)' }
+  serialization-script: |
+    out['backward-sign'] = inp['is-forward']:as_bool() and '' or '<'
+    out['negative-sign'] = inp['is-negative']:as_bool() and '!' or '='
+- name: "character-class"
+  continual:
+  - linear: { pattern: '\[?', fields: { 0: 'open-bracket-sign' } }
+  - linear: { pattern: '\^?', fields: { 0: 'negative-sign' } }
+  - linear: { pattern: '.+', fields: { 0: 'characters' } }
+  - linear: { pattern: '\]?', fields: { 0: 'close-bracket-sign' } }
+  - existing: { tag: "quantifier" }
+  serialization-script: |
+    out['characters'] = inp['characters']:as_string()
+    local content = inp['characters']:as_string()
+    local is_content_one_symbol = content:len() == 1 or content:len() == 2 and content:sub(0, 1) == '\\'
+    local is_negative = inp['is-negative']:as_bool()
+    if is_negative then
+      out['open-bracket-sign'] = '['
+      out['close-bracket-sign'] = ']'
+      out['negative-sign'] = '^'
+    elseif not is_content_one_symbol then
+      out['open-bracket-sign'] = '['
+      out['close-bracket-sign'] = ']'
+      out['negative-sign'] = ''
+    else
+      out['open-bracket-sign'] = ''
+      out['close-bracket-sign'] = ''
+      out['negative-sign'] = ''
+    end
+- name: "disjunction"
+  continual:
+  - existing: { tag: "token", prefix: 'left' }
+  - linear: { pattern: '\|' }
+  - existing: { tag: "token", prefix: 'right' }
+- name: "quantifier"
+  branched:
+    branching-script: |
+      local from = inp['from']:as_u64()
+      local to = inp['to'] and inp['to']:as_u64() or nil
+      local is_lazy = inp['is-lazy']:as_bool()
+      if from == 1 and to and to == 1 then
+        branch = 0 -- without quantifier
+      elseif from == 0 and to == nil then
+        if is_lazy then
+          branch = 1 -- *?
         else
-          branch = 5 -- {\d+,\d*}??
+          branch = 2 -- *
         end
-      debranching-script: ''
-      rules:
-        - linear: { pattern: '' }
-        - linear: { pattern: '\*\?' }
-        - linear: { pattern: '\*' }
-        - linear: { pattern: '\+\?' }
-        - linear: { pattern: '\+' }
-        - existing: { tag: "range-quantifier" }
-  - name: "range-quantifier"
-    continual:
-      - linear: { pattern: '\{(\d+),(\d*)\}(\??)', fields: { 1: 'from', 2: 'to', 3: 'is-lazy' } }
-    serialization-script: |
-      out['from'] = tostring(inp['from']:as_u64())
-      out['to'] = inp['to'] and tostring(inp['to']:as_u64()) or ''
-      out['is-lazy'] = inp['is-lazy']:as_bool() and '?' or ''
+      -- +
+      elseif from == 1 and to == nil then
+        if is_lazy then
+          branch = 3 -- +?
+        else
+          branch = 4 -- +
+        end
+      -- {\d+,}
+      else
+        branch = 5 -- {\d+,\d*}??
+      end
+    debranching-script: ''
+    rules:
+    - linear: { pattern: '' }
+    - linear: { pattern: '\*\?' }
+    - linear: { pattern: '\*' }
+    - linear: { pattern: '\+\?' }
+    - linear: { pattern: '\+' }
+    - existing: { tag: "range-quantifier" }
+- name: "range-quantifier"
+  continual:
+  - linear: { pattern: '\{(\d+),(\d*)\}(\??)', fields: { 1: 'from', 2: 'to', 3: 'is-lazy' } }
+  serialization-script: |
+    out['from'] = tostring(inp['from']:as_u64())
+    out['to'] = inp['to'] and tostring(inp['to']:as_u64()) or ''
+    out['is-lazy'] = inp['is-lazy']:as_bool() and '?' or ''
 ...

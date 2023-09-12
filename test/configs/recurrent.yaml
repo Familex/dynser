@@ -2,28 +2,29 @@
 # yaml-language-server: $schema=../../doc/dynser_config_schema.json
 version: ''
 tags:
-  - name: "pos-list"
-    continual:
-      - linear: { pattern: '\[ ' }
-      - existing: { tag: "pos-list-payload" }
-      - linear: { pattern: ' \]' }
-  - name: "pos-list-payload"
-    recurrent:
-      - linear: { pattern: '\( ' }
-      - existing: { tag: "pos" }
-      - linear: { pattern: ' \)' }
-      - infix: { pattern: ', ' }
-  - name: "pos"
-    continual:
-      - linear:
-          pattern: '(-?\d+), (-?\d+)'
-          fields:
-            1: x
-            2: y
-    serialization-script: |
-      out['x'] = tostring(inp['x']:as_i32())
-      out['y'] = tostring(inp['y']:as_i32())
-    deserialization-script: |
-      out['x'] = dynser.from_i32(tonumber(inp['x']))
-      out['y'] = dynser.from_i32(tonumber(inp['y']))
+- name: "pos-list"
+  continual:
+  - linear: { pattern: '\[ ' }
+  - existing: { tag: "pos-list-payload" }
+  - linear: { pattern: ' \]' }
+- name: "pos-list-payload"
+  recurrent:
+    rules:
+    - linear: { pattern: '\( ' }
+    - existing: { tag: "pos" }
+    - linear: { pattern: ' \)' }
+    - infix: { pattern: ', ' }
+- name: "pos"
+  continual:
+  - linear:
+      pattern: '(-?\d+), (-?\d+)'
+      fields:
+        1: x
+        2: y
+  serialization-script: |
+    out['x'] = tostring(inp['x']:as_i32())
+    out['y'] = tostring(inp['y']:as_i32())
+  deserialization-script: |
+    out['x'] = dynser.from_i32(tonumber(inp['x']))
+    out['y'] = dynser.from_i32(tonumber(inp['y']))
 ...

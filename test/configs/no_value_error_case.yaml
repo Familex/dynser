@@ -2,28 +2,29 @@
 # yaml-language-server: $schema=../../doc/dynser_config_schema.json
 version: ''
 tags:
-  - name: "a"
-    continual: [ linear: { pattern: '.+', fields: { 0: value } } ]
-  - name: "b"
-    continual: [ linear: { pattern: '.+', fields: { 1: value } } ]
-  - name: "c"
-    continual: [ existing: { tag: "b" } ]
-  - name: "d"
-    branched: { branching-script: 'branch = 0', debranching-script: '', rules: [ existing: { tag: "c" } ] }
-  - name: "e"
-    branched: { branching-script: 'branch = 0', debranching-script: '', rules: [ existing: { tag: "d" } ] }
-  - name: "f"
-    branched: { branching-script: 'branch = 0', debranching-script: '', rules: [ linear: { pattern: '.+', fields: { 0: value } } ] }
+- name: "a"
+  continual: [ linear: { pattern: '.+', fields: { 0: value } } ]
+- name: "b"
+  continual: [ linear: { pattern: '.+', fields: { 1: value } } ]
+- name: "c"
+  continual: [ existing: { tag: "b" } ]
+- name: "d"
+  branched: { branching-script: 'branch = 0', debranching-script: '', rules: [ existing: { tag: "c" } ] }
+- name: "e"
+  branched: { branching-script: 'branch = 0', debranching-script: '', rules: [ existing: { tag: "d" } ] }
+- name: "f"
+  branched: { branching-script: 'branch = 0', debranching-script: '', rules: [ linear: { pattern: '.+', fields: { 0: value } } ] }
 # there is no 'value', but longest list is 0 length
 # - name: ""
 #   recurrent: [ linear: { pattern: '.+', fields: { 0: value } } ]
 # - name: ""
 #   recurrent: [ existing: { tag: "6" } ]
 # request for two lists and not set one of them
-  - name: "g"
-    recurrent:
-      - existing: { tag: "e" }
-      - linear: { pattern: '.+', fields: { 0: 'value-7' } }
-    serialization-script: |
-      out['value-7'] = inp['value-7']:as_string()
+- name: "g"
+  recurrent:
+    rules:
+    - existing: { tag: "e" }
+    - linear: { pattern: '.+', fields: { 0: 'value-7' } }
+  serialization-script: |
+    out['value-7'] = inp['value-7']:as_string()
 ...

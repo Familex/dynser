@@ -2,12 +2,12 @@
 # yaml-language-server: $schema=../../doc/dynser_config_schema.json
 version: ''
 tags:
-  - name: "a"
-    continual: [ linear: { pattern: ':(' } ]
-  - name: "b"
-    continual: [ linear: { pattern: '+' } ]
-  - name: "c"
-    continual: [ linear: { pattern: ')' } ]
-  - name: "d"
-    continual: [ linear: { pattern: '\' } ]
+- name: "a"
+  continual: [ linear: { pattern: ':(' } ]
+- name: "b"
+  continual: [ linear: { pattern: '+' } ]
+- name: "c"
+  continual: [ linear: { pattern: ')' } ]
+- name: "d"
+  continual: [ linear: { pattern: '\' } ]
 ...

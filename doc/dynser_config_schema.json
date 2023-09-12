@@ -155,111 +155,112 @@
             }
           },
           "recurrent": {
-            "type": "array",
+            "type": "object",
             "description": "use to handle repeating data",
-            "items": {
-              "type": "object",
-              "description": "field type",
-              "propertyNames": {
-                "pattern": "existing|linear|infix"
+            "required": [ "rules" ],
+            "properties": {
+              "mapping-settings": {
+                "type": "object",
+                "description": "use to change properties map format",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "structure of propreties map",
+                    "default": "dict-of-arrays",
+                    "pattern": "^(dict-of-arrays)|(array-of-dicts)$"
+                  }
+                }
               },
-              "patternProperties": {
-                "existing": {
+              "rules": {
+                "type": "array",
+                "description": "nested rules",
+                "items": {
                   "type": "object",
-                  "required": [
-                    "tag"
-                  ],
-                  "description": "existing field rule",
-                  "properties": {
-                    "tag": {
-                      "$ref": "#/definitions/existing/properties/tag"
+                  "description": "field type",
+                  "propertyNames": {
+                    "pattern": "existing|linear|infix"
+                  },
+                  "patternProperties": {
+                    "existing": {
+                      "type": "object",
+                      "required": [
+                        "tag"
+                      ],
+                      "description": "existing field rule",
+                      "properties": {
+                        "tag": {
+                          "$ref": "#/definitions/existing/properties/tag"
+                        },
+                        "prefix": {
+                          "$ref": "#/definitions/existing/properties/prefix"
+                        },
+                        "required": {
+                          "$ref": "#/definitions/existing/properties/required"
+                        },
+                        "wrap": {
+                          "$ref": "#/definitions/recurrent/wrap"
+                        },
+                        "default": {
+                          "$ref": "#/definitions/recurrent/default"
+                        },
+                        "priority": {
+                          "$ref": "#/definitions/recurrent/priority"
+                        }
+                      }
                     },
-                    "prefix": {
-                      "$ref": "#/definitions/existing/properties/prefix"
+                    "linear": {
+                      "type": "object",
+                      "required": [
+                        "pattern"
+                      ],
+                      "description": "define one-pattern rule",
+                      "properties": {
+                        "pattern": {
+                          "$ref": "#/definitions/field-pattern"
+                        },
+                        "fields": {
+                          "$ref": "#/definitions/linear/fields"
+                        },
+                        "dyn-groups": {
+                          "$ref": "#/definitions/linear/dyn-groups"
+                        },
+                        "wrap": {
+                          "$ref": "#/definitions/recurrent/wrap"
+                        },
+                        "default": {
+                          "$ref": "#/definitions/recurrent/default"
+                        },
+                        "priority": {
+                          "$ref": "#/definitions/recurrent/priority"
+                        }
+                      }
                     },
-                    "required": {
-                      "$ref": "#/definitions/existing/properties/required"
-                    },
-                    "wrap": {
-                      "$ref": "#/definitions/recurrent/wrap"
-                    },
-                    "default": {
-                      "$ref": "#/definitions/recurrent/default"
-                    },
-                    "priority": {
-                      "$ref": "#/definitions/recurrent/priority"
-                    }
-                  }
-                },
-                "linear": {
-                  "type": "object",
-                  "required": [
-                    "pattern"
-                  ],
-                  "description": "define one-pattern rule",
-                  "properties": {
-                    "pattern": {
-                      "$ref": "#/definitions/field-pattern"
-                    },
-                    "fields": {
-                      "$ref": "#/definitions/linear/fields"
-                    },
-                    "dyn-groups": {
-                      "$ref": "#/definitions/linear/dyn-groups"
-                    },
-                    "wrap": {
-                      "$ref": "#/definitions/recurrent/wrap"
-                    },
-                    "default": {
-                      "$ref": "#/definitions/recurrent/default"
-                    },
-                    "priority": {
-                      "$ref": "#/definitions/recurrent/priority"
-                    }
-                  }
-                },
-                "infix": {
-                  "type": "object",
-                  "required": [
-                    "pattern"
-                  ],
-                  "description": "linear rule, what will not be applied to last element",
-                  "properties": {
-                    "pattern": {
-                      "$ref": "#/definitions/field-pattern"
-                    },
-                    "fields": {
-                      "$ref": "#/definitions/linear/fields"
-                    },
-                    "dyn-groups": {
-                      "$ref": "#/definitions/linear/dyn-groups"
-                    },
-                    "wrap": {
-                      "$ref": "#/definitions/recurrent/wrap"
-                    },
-                    "default": {
-                      "$ref": "#/definitions/recurrent/default"
+                    "infix": {
+                      "type": "object",
+                      "required": [
+                        "pattern"
+                      ],
+                      "description": "linear rule, what will not be applied to last element",
+                      "properties": {
+                        "pattern": {
+                          "$ref": "#/definitions/field-pattern"
+                        },
+                        "fields": {
+                          "$ref": "#/definitions/linear/fields"
+                        },
+                        "dyn-groups": {
+                          "$ref": "#/definitions/linear/dyn-groups"
+                        },
+                        "wrap": {
+                          "$ref": "#/definitions/recurrent/wrap"
+                        },
+                        "default": {
+                          "$ref": "#/definitions/recurrent/default"
+                        }
+                      }
                     }
                   }
                 }
-              }
-            }
-          },
-          "recurrent-dict": {
-            "type": "object",
-            "description": "iterates over dictionaries in lists property",
-            "required": [
-              "key",
-              "tag"
-            ],
-            "properties": {
-              "key": {
-                "type": "string",
-                "description": "dictionary list property key"
-              },
-              "tag": {
-                "type": "string",
-                "description": "existing tag name to handle dictionaries"
               }
             }
           },

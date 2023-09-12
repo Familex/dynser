@@ -23,6 +23,7 @@ struct RawContents
     std::string config;
 };
 
+// FIXME remote this namespace
 namespace yaml
 {
 using PriorityType = std::int32_t;
@@ -36,6 +37,11 @@ using GroupValues = std::unordered_map<std::size_t, std::string>;
 using DynGroupValues = std::unordered_map<std::size_t, std::string>;
 
 using Script = std::string;
+
+enum class RecurrentMappingType {
+    DictOfArrays,
+    ArrayOfDicts,
+};
 
 struct ConExisting
 {
@@ -98,7 +104,16 @@ struct RecInfix
 };
 
 using Continual = std::vector<std::variant<ConExisting, ConLinear>>;
-using Recurrent = std::vector<std::variant<RecExisting, RecLinear, RecInfix>>;
+
+struct Recurrent
+{
+    RecurrentMappingType mapping_type;
+    std::optional<std::string> root_key;
+
+    using Rules = std::variant<RecExisting, RecLinear, RecInfix>;
+    std::vector<Rules> rules;
+};
+
 struct Branched
 {
     Script branching_script;
@@ -107,13 +122,8 @@ struct Branched
     using Rules = std::variant<BraExisting, BraLinear>;
     std::vector<Rules> rules;
 };
-struct RecurrentDict
-{
-    std::string key;
-    std::string tag;
-};
 
-using Nested = std::variant<Continual, Recurrent, Branched, RecurrentDict>;
+using Nested = std::variant<Continual, Recurrent, Branched>;
 
 struct Tag
 {

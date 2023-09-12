@@ -18,6 +18,7 @@ add_library (
     "regex/from_string.h" "regex/from_string.cpp"
     "config/structures.h" "config/structures.cpp"
     "config/keywords.h"
+    "config/defaults.h"
 
     "util/mapper_helpers.hpp"
     "util/prefix.hpp"

@@ -1,8 +1,10 @@
 #include "config.h"
 
+#include "defaults.h"
 #include "keywords.h"
 #include "yaml-cpp/yaml.h"
 
+#include <cassert>
 #include <charconv>
 #include <expected>
 #include <locale>
@@ -167,11 +169,34 @@ config::ParseResult config::from_string(const std::string_view sv) noexcept
                         return nested;
                     }
                     else if (const auto recurrent = tag[keywords::NESTED_RECURRENT]) {
-                        Recurrent nested;
+                        Recurrent nested{
+                            .mapping_type = DEFLT_REC_MAPPING_TYPE,
+                        };
 
-                        for (const auto recurrent_rule_type : recurrent) {
+                        if (const auto mapping_settings = recurrent[keywords::RECURRENT_MAPPING_SETTINGS]) {
+                            nested.mapping_type =
+                                as_opt<std::string>(mapping_settings[keywords::RECURRENT_MAPPING_TYPE])
+                                    .transform([](std::string const& type) {
+                                        if (type == keywords::RECURRENT_MAPPING_TYPE_DICT_OF_ARRAYS) {
+                                            return RecurrentMappingType::DictOfArrays;
+                                        }
+                                        else if (type == keywords::RECURRENT_MAPPING_TYPE_ARRAY_OF_DICTS) {
+                                            return RecurrentMappingType::ArrayOfDicts;
+                                        }
+                                        else {
+                                            // FIXME throw exception or something
+                                            assert(false);
+                                            return DEFLT_REC_MAPPING_TYPE;
+                                        }
+                                    })
+                                    .value_or(DEFLT_REC_MAPPING_TYPE);
+                            nested.root_key =
+                                as_opt<std::string>(mapping_settings[keywords::RECURRENT_MAPPING_ROOT_KEY]);
+                        }
+
+                        for (const auto recurrent_rule_type : recurrent[keywords::RECURRENT_RULES]) {
                             if (const auto rule = recurrent_rule_type[keywords::RECURRENT_EXISTING]) {
-                                nested.push_back(RecExisting{
+                                nested.rules.push_back(RecExisting{
                                     .tag = rule[keywords::RECURRENT_EXISTING_TAG].as<std::string>(),
                                     .prefix = as_opt<std::string>(rule[keywords::RECURRENT_EXISTING_PREFIX]),
                                     .required =
@@ -184,7 +209,7 @@ config::ParseResult config::from_string(const std::string_view sv) noexcept
                                 });
                             }
                             else if (const auto rule = recurrent_rule_type[keywords::RECURRENT_LINEAR]) {
-                                nested.push_back(RecLinear{
+                                nested.rules.push_back(RecLinear{
                                     .pattern = rule[keywords::RECURRENT_LINEAR_PATTERN].as<std::string>(),
                                     .dyn_groups = as_opt<DynGroupValues>(rule[keywords::RECURRENT_LINEAR_DYN_GROUPS]),
                                     .fields = as_opt<GroupValues>(rule[keywords::RECURRENT_LINEAR_FIELDS]),
@@ -196,7 +221,7 @@ config::ParseResult config::from_string(const std::string_view sv) noexcept
                                 });
                             }
                             else if (const auto rule = recurrent_rule_type[keywords::RECURRENT_INFIX]) {
-                                nested.push_back(RecInfix{
+                                nested.rules.push_back(RecInfix{
                                     .pattern = rule[keywords::RECURRENT_INFIX_PATTERN].as<std::string>(),
                                     .dyn_groups = as_opt<DynGroupValues>(rule[keywords::RECURRENT_INFIX_DYN_GROUPS]),
                                     .fields = as_opt<GroupValues>(rule[keywords::RECURRENT_INFIX_FIELDS]),
@@ -208,12 +233,6 @@ config::ParseResult config::from_string(const std::string_view sv) noexcept
 
                         return nested;
                     }
-                    else if (const auto recurrent_dict = tag[keywords::NESTED_RECURRENTDICT]) {
-                        return RecurrentDict{
-                            .key = recurrent_dict[keywords::RECURRENTDICT_KEY].as<std::string>(),
-                            .tag = recurrent_dict[keywords::RECURRENTDICT_TAG].as<std::string>(),
-                        };
-                    }
 
                     std::unreachable();
                 }(),
@@ -222,7 +241,10 @@ config::ParseResult config::from_string(const std::string_view sv) noexcept
             };
         }
 
-        // FIXME logic validation (e.g. claim prefix if several existing of one tag)
+        // FIXME logic validation
+        // - claim prefix if several existing of one tag
+        // - reccurent with array-of-dicts structure must have root-key
+        // etc
 
         return result;
     }

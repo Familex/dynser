@@ -2,17 +2,17 @@
 # yaml-language-server: $schema=../../doc/dynser_config_schema.json
 version: ''
 tags:
-  - name: quux
-    continual:
-      - linear: { pattern: '-?\d+', fields: { 0: value } }
-    serialization-script: |
-      out['value'] = tostring(inp['value']:as_i32())
-  
-  - name: quuux
-    continual:
-      - existing: { tag: "quux" }
-      - linear: { pattern: ' ## ' }
-      - linear: { pattern: '-?\d+', fields: { 0: value } }
-    serialization-script: |
-      out['value'] = tostring(inp['value']:as_i32())
+- name: quux
+  continual:
+  - linear: { pattern: '-?\d+', fields: { 0: value } }
+  serialization-script: |
+    out['value'] = tostring(inp['value']:as_i32())
+
+- name: quuux
+  continual:
+  - existing: { tag: "quux" }
+  - linear: { pattern: ' ## ' }
+  - linear: { pattern: '-?\d+', fields: { 0: value } }
+  serialization-script: |
+    out['value'] = tostring(inp['value']:as_i32())
 ...
